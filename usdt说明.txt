@@ -1,0 +1,22 @@
+1、图标上传到根目录下的/assets/icon文件夹里。
+
+2、上传usdt插件到/plugins目录下、在后台里-支付接口-刷新插件列表将添加的插件刷新出来。
+
+3、添加支付方式：后台点击-支付接口-支付方式-新增支付方式调用值usdt，显示名称usdt
+
+4、添加后即可正常添加，支付通道，点击支付通道 添加 支付通道 支付方式usdt，支付插件usdt，然后按说明配置即可
+
+5、usdt通道不 用户前台不显示费率，在后台设置【商户管理】-【用户组设置】编辑用户组 添加usdt的支付通道和修改默认比例
+
+配置监控编辑以下文件
+/var/spool/cron/root
+
+添加如下监控，目录就是你的网站目录，后面的日志是监控的日志保存的地方。
+* * * * * cd /www/wwwroot/pay.xiao9ym.com/plugins/usdt/ && php cron.php >> /www/wwwroot/pay.xiao9ym.com/plugins/usdt/cron.log 2>&1
+* * * * * sleep 10; cd /www/wwwroot/pay.xiao9ym.com/plugins/usdt/ && php cron.php >> /www/wwwroot/pay.xiao9ym.com/plugins/usdt/cron.log 2>&1
+* * * * * sleep 20; cd /www/wwwroot/pay.xiao9ym.com/plugins/usdt/ && php cron.php >> /www/wwwroot/pay.xiao9ym.com/plugins/usdt/cron.log 2>&1
+* * * * * sleep 30; cd /www/wwwroot/pay.xiao9ym.com/plugins/usdt/ && php cron.php >> /www/wwwroot/pay.xiao9ym.com/plugins/usdt/cron.log 2>&1
+* * * * * sleep 40; cd /www/wwwroot/pay.xiao9ym.com/plugins/usdt/ && php cron.php >> /www/wwwroot/pay.xiao9ym.com/plugins/usdt/cron.log 2>&1
+* * * * * sleep 50; cd /www/wwwroot/pay.xiao9ym.com/plugins/usdt/ && php cron.php >> /www/wwwroot/pay.xiao9ym.com/plugins/usdt/cron.log 2>&1
+
+
