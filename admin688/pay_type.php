@@ -137,7 +137,7 @@ function save(){
 	$.ajax({
 		type : 'POST',
 		url : 'ajax_pay.php?act=savePayType',
-		data : $("#form-store").serialize(),
+		data : $("#form-store").serialize() + '&csrf_token=' + encodeURIComponent($('meta[name="csrf-token"]').attr('content')),
 		dataType : 'json',
 		success : function(data) {
 			layer.close(ii);

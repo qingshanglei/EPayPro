@@ -275,7 +275,7 @@ function saveInfo(id){
 	$.ajax({
 		type : 'POST',
 		url : 'ajax_pay.php?act=saveRollInfo&id='+id,
-		data : $("#form-info").serialize(),
+		data : $("#form-info").serialize() + '&csrf_token=' + encodeURIComponent($('meta[name="csrf-token"]').attr('content')),
 		dataType : 'json',
 		success : function(data) {
 			layer.close(ii);
