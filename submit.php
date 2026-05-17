@@ -106,7 +106,7 @@ if($oldorder && time() - strtotime($oldorder['addtime']) < 864000){
 		$firstGetChannel = false;
 	}
 }else{
-	$trade_no=date("YmdHis").rand(11111,99999);
+	$trade_no=date("YmdHis").random(8, 1);
 	if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param]))sysmsg('创建订单失败，请返回重试！');
 }
 
@@ -155,7 +155,7 @@ if($firstGetChannel){
 	// 随机增减金额
 	if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = $realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2));
 
-	$DB->exec("UPDATE pre_order SET type='{$submitData['typeid']}',channel='{$submitData['channel']}',realmoney='$realmoney',getmoney='$getmoney' WHERE trade_no='$trade_no'");
+	$DB->exec("UPDATE pre_order SET type=?,channel=?,realmoney=?,getmoney=? WHERE trade_no=?", [$submitData['typeid'], $submitData['channel'], $realmoney, $getmoney, $trade_no]);
 }
 
 

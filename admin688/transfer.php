@@ -11,8 +11,11 @@ $app = isset($_GET['app'])?$_GET['app']:'alipay';
 
 if(isset($_POST['submit'])){
 	if(!checkRefererHost())exit();
+	if(empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token'])showmsg('CSRF验证失败，请刷新页面重试',3);
 	$out_biz_no = trim($_POST['out_biz_no']);
-	if(!isset($_POST['paypwd']) || $_POST['paypwd']!==$conf['admin_paypwd'])showmsg('支付密码错误',3);
+	if(!isset($_POST['paypwd']) || !(
+        password_verify($_POST['paypwd'], $conf['admin_paypwd'])
+    ))showmsg('支付密码错误',3);
 	$payee_account = trim($_POST['payee_account']);
 	$payee_real_name = trim($_POST['payee_real_name']);
 	$money = trim($_POST['money']);
@@ -155,7 +158,7 @@ $out_biz_no = date("YmdHis").rand(11111,99999);
 <?php }elseif($app=='bank'){
 	$alipay_channel = $DB->getAll("SELECT * FROM pre_channel WHERE plugin='alipay'");
 	?>
-          <form action="?app=bank" method="POST" role="form">
+          <form action="?app=bank" method="POST" role="form"><input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>"/>
 			<div class="form-group">
 				<div class="input-group"><div class="input-group-addon">通道选择</div>
 				<select name="channel" class="form-control" default="<?php echo $conf['transfer_alipay']?>">

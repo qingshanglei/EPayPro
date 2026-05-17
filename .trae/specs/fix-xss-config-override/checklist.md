@@ -1,0 +1,7 @@
+- [ ] set.php 中所有输出到HTML属性/内容的 `$conf['xxx']` 均使用 `htmlspecialchars($conf['xxx'], ENT_QUOTES, 'UTF-8')` 转义
+- [ ] set.php 中条件表达式（如 `$conf['reg_open']==0?'display:none;':null`）未被错误转义
+- [ ] ajax.php 的 `set` case 包含 `$allowed_keys` 白名单数组
+- [ ] ajax.php 的 `foreach` 循环内有 `if(!in_array($k, $allowed_keys)) continue;` 校验
+- [ ] ajax.php 白名单不包含 admin_user, admin_pwd, admin_paypwd, syskey, cronkey
+- [ ] ajax.php 白名单包含所有合法配置键（如 description, kfqq, localurl 等）
+- [ ] 已修复的文件（login.php, uset.php, ajax_user.php, ajax_settle.php, ajax_pay.php）未被意外修改

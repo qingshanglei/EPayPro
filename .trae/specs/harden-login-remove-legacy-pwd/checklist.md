@@ -1,0 +1,10 @@
+- [x] 管理后台登录连续错误3次后锁定5分钟，5次后锁定15分钟，8次后锁定30分钟，10次以上锁定1小时
+- [x] 锁定期间登录提示剩余等待时间，不验证密码
+- [x] 登录成功后错误计数和锁定时间被清除
+- [x] getMd5Pwd() 函数已移除
+- [x] verifyPwd() 函数仅使用 password_verify()，不含MD5分支
+- [x] 所有 strlen($hash) < 60 明文密码兼容判断已移除
+- [x] 所有密码自动升级逻辑（登录时saveSetting+CACHE->update）已移除
+- [x] install/install.sql 中 version 值为 '0.01'
+- [x] install/install.sql 中 admin_pwd 和 admin_paypwd 使用bcrypt哈希
+- [x] install/install.sql 中 pre_user.pwd 字段为 varchar(255)

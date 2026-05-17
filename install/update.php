@@ -1,4 +1,7 @@
 <?php
+if(file_exists('install.lock')){
+	exit('系统已安装，禁止执行更新操作。如需更新请删除install.lock文件。');
+}
 error_reporting(0);
 require '../config.php';
 
@@ -31,19 +34,21 @@ if($rs = $db->query("SELECT v FROM pay_config WHERE k='version'")){
 	$version = $rs->fetchColumn();
 }
 
-if($version<2024){
+if($version >= 0.01){
+	exit('你的网站已经升级到最新版本了');
+}elseif($version<2024 && $version > 0){
 	$sqls = file_get_contents('update2.sql');
 	$sqls=explode(';', $sqls);
 	$sqls[]="UPDATE `pre_config` SET `v` = '2024' where `k` = 'version'";
-}elseif($version<2001){
+}elseif($version<2001 && $version > 0){
 	$sqls = file_get_contents('update.sql');
 	$sqls=explode(';', $sqls);
 	$sqls[]="INSERT INTO `pay_config` VALUES ('syskey', '".random(32)."')";
 	$sqls[]="INSERT INTO `pay_config` VALUES ('build', '".$date."')";
 	$sqls[]="INSERT INTO `pay_config` VALUES ('cronkey', '".rand(111111,999999)."')";
-	$sqls[]="UPDATE `pay_config` SET `v` = '2001' where `k` = 'version'";
+	$sqls[]="UPDATE `pre_config` SET `v` = '2001' where `k` = 'version'";
 }else{
-	exit('你的网站已经升级到最新版本了');
+	exit('版本信息异常，无法自动升级');
 }
 $sqls[]="UPDATE `pre_cache` SET `v` = '' where `k` = 'config'";
 $success=0;$error=0;$errorMsg=null;

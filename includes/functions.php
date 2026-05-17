@@ -26,8 +26,12 @@ function curl_get($url)
 	$httpheader[] = "Accept-Language: zh-CN,zh;q=0.8";
 	$httpheader[] = "Connection: close";
 	curl_setopt($ch, CURLOPT_HTTPHEADER, $httpheader);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+	$cainfo = ini_get('curl.cainfo');
+	if($cainfo && file_exists($cainfo)){
+		curl_setopt($ch, CURLOPT_CAINFO, $cainfo);
+	}
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36');
 	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
@@ -39,8 +43,12 @@ function get_curl($url, $post=0, $referer=0, $cookie=0, $header=0, $ua=0, $nobao
 {
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+	$cainfo = ini_get('curl.cainfo');
+	if($cainfo && file_exists($cainfo)){
+		curl_setopt($ch, CURLOPT_CAINFO, $cainfo);
+	}
 	$httpheader[] = "Accept: */*";
 	$httpheader[] = "Accept-Encoding: gzip,deflate,sdch";
 	$httpheader[] = "Accept-Language: zh-CN,zh;q=0.8";
@@ -83,21 +91,23 @@ function get_curl($url, $post=0, $referer=0, $cookie=0, $header=0, $ua=0, $nobao
 }
 function real_ip($type=0){
 $ip = $_SERVER['REMOTE_ADDR'];
-if($type<=0 && isset($_SERVER['HTTP_X_FORWARDED_FOR']) && preg_match_all('#\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}#s', $_SERVER['HTTP_X_FORWARDED_FOR'], $matches)) {
-	foreach ($matches[0] AS $xip) {
-		if (filter_var($xip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-			$ip = $xip;
-			break;
-		}
-	}
-} elseif ($type<=0 && isset($_SERVER['HTTP_CLIENT_IP']) && filter_var($_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-	$ip = $_SERVER['HTTP_CLIENT_IP'];
-} elseif ($type<=1 && isset($_SERVER['HTTP_CF_CONNECTING_IP']) && filter_var($_SERVER['HTTP_CF_CONNECTING_IP'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-	$ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
-} elseif ($type<=1 && isset($_SERVER['HTTP_X_REAL_IP']) && filter_var($_SERVER['HTTP_X_REAL_IP'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-	$ip = $_SERVER['HTTP_X_REAL_IP'];
+if($type<=0){
+    return $ip;
 }
-return $ip;
+if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
+    $arr = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+    $ip = trim($arr[0]);
+}elseif(isset($_SERVER['HTTP_CLIENT_IP'])){
+    $ip = $_SERVER['HTTP_CLIENT_IP'];
+}elseif(isset($_SERVER['HTTP_X_REAL_IP'])){
+    $ip = $_SERVER['HTTP_X_REAL_IP'];
+}elseif(isset($_SERVER['HTTP_CF_CONNECTING_IP'])){
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+}
+if(filter_var($ip, FILTER_VALIDATE_IP)){
+    return $ip;
+}
+return $_SERVER['REMOTE_ADDR'];
 }
 function get_ip_city($ip)
 {
@@ -282,15 +292,16 @@ function authcode($string, $operation = 'DECODE', $key = '', $expiry = 0) {
 	}
 }
 
-function random($length) {
-	$seed = base_convert(md5(microtime().$_SERVER['DOCUMENT_ROOT']), 16, $numeric ? 10 : 35);
-	$seed = $numeric ? (str_replace('0', '', $seed).'012340567890') : ($seed.'zZ'.strtoupper($seed));
-	$hash = '';
-	$max = strlen($seed) - 1;
-	for($i = 0; $i < $length; $i++) {
-		$hash .= $seed[mt_rand(0, $max)];
+function random($length, $numeric = 0) {
+	if($numeric) {
+		$result = '';
+		for($i = 0; $i < $length; $i++) {
+			$result .= random_int(0, 9);
+		}
+		return $result;
 	}
-	return $hash;
+	$bytes = random_bytes($length);
+	return substr(bin2hex($bytes), 0, $length);
 }
 function showmsg($content = '未知的异常',$type = 4,$back = false)
 {
@@ -374,8 +385,8 @@ p{position:absolute;left:50%;top:50%;height:35px;margin:-35px 0 0 -160px;padding
 function getSid() {
     return md5(uniqid(mt_rand(), true) . microtime());
 }
-function getMd5Pwd($pwd, $salt=null) {
-    return md5(md5($pwd) . md5('1277180438'.$salt));
+function verifyPwd($pwd, $hash) {
+    return password_verify($pwd, $hash);
 }
 
 /**
@@ -523,8 +534,8 @@ function processOrder($srow,$notify=true){
 			$paystatus = $conf['user_review']==1?2:1;
 			$sds=$DB->exec("INSERT INTO `pre_user` (`upid`, `key`, `money`, `email`, `phone`, `addtime`, `pay`, `settle`, `keylogin`, `apply`, `status`) VALUES (:upid, :key, '0.00', :email, :phone, :addtime, :paystatus, 1, 0, 0, 1)", [':upid'=>$info['upid'], ':key'=>$key, ':email'=>$info['email'], ':phone'=>$info['phone'], ':addtime'=>$info['addtime'], ':paystatus'=>$paystatus]);
 			$uid=$DB->lastInsertId();
-			$pwd = getMd5Pwd($info['pwd'], $uid);
-			$DB->exec("UPDATE `pre_user` SET `pwd` ='{$pwd}' WHERE `uid`='$uid'");
+			$pwd_hash = $info['pwd_hash'];
+			$DB->exec("UPDATE `pre_user` SET `pwd` =:pwd WHERE `uid`=:uid", [':pwd'=>$pwd_hash, ':uid'=>$uid]);
 			if($sds && !empty($info['email'])){
 				$sub = $conf['sitename'].' - 注册成功通知';
 				$msg = '<h2>商户注册成功通知</h2>感谢您注册'.$conf['sitename'].'！<br/>您的登录账号：'.$info['email'].'<br/>您的商户ID：'.$uid.'<br/>您的商户秘钥：'.$key.'<br/>'.$conf['sitename'].'官网：<a href="http://'.$_SERVER['HTTP_HOST'].'/" target="_blank">'.$_SERVER['HTTP_HOST'].'</a><br/>【<a href="http://'.$_SERVER['HTTP_HOST'].'/user/" target="_blank">商户管理后台</a>】';

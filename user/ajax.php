@@ -57,7 +57,6 @@ case 'login':
 	if($type==1 && is_numeric($user) && strlen($user)<=6)$type=0;
 	if($type==1){
 		$userrow=$DB->getRow("SELECT * FROM pre_user WHERE email='{$user}' OR phone='{$user}' limit 1");
-		$pass=getMd5Pwd($pass, $userrow['uid']);
 	}else{
 		if($conf['close_keylogin']==1)exit('{"code":-1,"msg":"未开启密钥登录，请使用账号密码登录！"}');
 		$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid='{$user}' limit 1");
@@ -65,7 +64,7 @@ case 'login':
 			exit('{"code":-1,"msg":"该商户未开启密钥登录，请使用账号密码登录！"}');
 		}
 	}
-	if($userrow && ($type==0 && $pass==$userrow['key'] || $type==1 && $pass==$userrow['pwd'])) {
+	if($userrow && ($type==0 && $pass==$userrow['key'] || $type==1 && verifyPwd($pass, $userrow['pwd']))) {
 		$uid = $userrow['uid'];
 		if($user_id=$_SESSION['Oauth_alipay_uid']){
 			$DB->exec("update `pre_user` set `alipay_uid` ='$user_id' where `uid`='$uid'");
@@ -81,7 +80,8 @@ case 'login':
 		$expiretime=time()+604800;
 		$token=authcode("{$uid}\t{$session}\t{$expiretime}", 'ENCODE', SYS_KEY);
 		ob_clean();
-		setcookie("user_token", $token, time() + 604800);
+		setcookie("user_token", "", time() - 604800, '/user/');
+		setcookie("user_token", $token, time() + 604800, '/', '', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), true);
 		$DB->exec("update `pre_user` set `lasttime` ='$date' where `uid`='$uid'");
 		if(empty($userrow['account']) || empty($userrow['username'])){
 			$result=array("code"=>0,"msg"=>"登录成功！正在跳转到收款账号设置","url"=>"./editinfo.php?start=1");
@@ -162,7 +162,7 @@ case 'sendcode':
 				$_SESSION['send_mail']=time();
 				exit('{"code":0,"msg":"succ"}');
 			}else{
-				exit('{"code":-1,"msg":"写入数据库失败。'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
 			exit('{"code":-1,"msg":"短信发送失败 '.$result.'"}');
@@ -194,10 +194,10 @@ case 'sendcode':
 				$_SESSION['send_mail']=time();
 				exit('{"code":0,"msg":"succ"}');
 			}else{
-				exit('{"code":-1,"msg":"写入数据库失败。'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
-			file_put_contents('mail.log',$result);
+			file_put_contents(SYSTEM_ROOT.'mail.log',$result);
 			exit('{"code":-1,"msg":"邮件发送失败"}');
 		}
 	}
@@ -265,7 +265,7 @@ case 'reg':
 		if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`tid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`domain`,`ip`,`status`) VALUES (:trade_no, :out_trade_no, :uid, 1, NOW(), :name, :money, :notify_url, :return_url, :domain, :clientip, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$trade_no, ':uid'=>$conf['reg_pay_uid'], ':name'=>'商户申请', ':money'=>$conf['reg_pay_price'], ':notify_url'=>$return_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip]))
 			exit('{"code":-1,"msg":"创建订单失败，请返回重试！"}');
 
-		$cacheData = ['verifytype'=>$conf['verifytype'], 'email'=>$email, 'phone'=>$phone, 'pwd'=>$pwd, 'addtime'=>$date, 'codeid'=>$row['id'], 'upid'=>$upid];
+		$cacheData = ['verifytype'=>$conf['verifytype'], 'email'=>$email, 'phone'=>$phone, 'pwd_hash'=>password_hash($pwd, PASSWORD_DEFAULT), 'addtime'=>$date, 'codeid'=>$row['id'], 'upid'=>$upid];
 		$sds = $CACHE->save('reg_'.$trade_no ,$cacheData, time()+3600);
 		if($sds){
 			$DB->exec("update `pre_regcode` set `status` ='1' where `id`='{$row['id']}'");
@@ -273,7 +273,7 @@ case 'reg':
 			$result=array("code"=>2,"msg"=>"订单创建成功！","trade_no"=>$trade_no,"need"=>$conf['reg_pay_price'],"paytype"=>$paytype);
 			unset($_SESSION['csrf_token']);
 		}else{
-			$result=array("code"=>-1,"msg"=>"订单创建失败！".$DB->error());
+			$result=array("code"=>-1,"msg"=>"订单创建失败！");
 		}
 	}else{
 		$key = random(32);
@@ -281,7 +281,7 @@ case 'reg':
 		$sds=$DB->exec("INSERT INTO `pre_user` (`upid`, `key`, `money`, `email`, `phone`, `addtime`, `pay`, `settle`, `keylogin`, `apply`, `status`) VALUES (:upid, :key, '0.00', :email, :phone, NOW(), :paystatus, 1, 0, 0, 1)", [':upid'=>$upid, ':key'=>$key, ':email'=>$email, ':phone'=>$phone, ':paystatus'=>$paystatus]);
 		$uid=$DB->lastInsertId();
 		if($sds){
-			$pwd = getMd5Pwd($pwd, $uid);
+			$pwd = password_hash($pwd, PASSWORD_DEFAULT);
 			$DB->exec("update `pre_user` set `pwd` ='{$pwd}' where `uid`='$uid'");
 			if(!empty($email)){
 				$sub = $conf['sitename'].' - 注册成功通知';
@@ -293,7 +293,7 @@ case 'reg':
 			$result=array("code"=>1,"msg"=>"申请商户成功！","uid"=>$uid,"key"=>$key);
 			unset($_SESSION['csrf_token']);
 		}else{
-			$result=array("code"=>-1,"msg"=>"申请商户失败！".$DB->error());
+			$result=array("code"=>-1,"msg"=>"申请商户失败！");
 		}
 	}
 	exit(json_encode($result));
@@ -355,7 +355,7 @@ case 'sendcode2':
 				$_SESSION['send_mail']=time();
 				exit('{"code":0,"msg":"succ"}');
 			}else{
-				exit('{"code":-1,"msg":"写入数据库失败。'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
 			exit('{"code":-1,"msg":"短信发送失败 '.$result.'"}');
@@ -387,10 +387,10 @@ case 'sendcode2':
 				$_SESSION['send_mail']=time();
 				exit('{"code":0,"msg":"succ"}');
 			}else{
-				exit('{"code":-1,"msg":"写入数据库失败。'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
-			file_put_contents('mail.log',$result);
+			file_put_contents(SYSTEM_ROOT.'mail.log',$result);
 			exit('{"code":-1,"msg":"邮件发送失败"}');
 		}
 	}
@@ -445,12 +445,12 @@ case 'findpwd':
 		exit('{"code":-1,"msg":"验证码不正确！"}');
 	}
 
-	$pwd = getMd5Pwd($pwd, $userrow['uid']);
+	$pwd = password_hash($pwd, PASSWORD_DEFAULT);
 	$sqs=$DB->exec("update `pre_user` set `pwd` ='{$pwd}' where `uid`='{$userrow['uid']}'");
 	if($sqs!==false){
 		exit('{"code":1,"msg":"重置密码成功！请牢记新密码"}');
 	}else{
-		exit('{"code":-1,"msg":"重置密码失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"重置密码失败！"}');
 	}
 break;
 case 'qrcode':

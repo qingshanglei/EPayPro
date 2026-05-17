@@ -5,6 +5,12 @@ $act=isset($_GET['act'])?daddslashes($_GET['act']):null;
 
 if(!checkRefererHost())exit('{"code":403}');
 
+if($_SERVER['REQUEST_METHOD']=='POST'){
+    if(empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']){
+        exit('{"code":-1,"msg":"CSRF验证失败，请刷新页面重试"}');
+    }
+}
+
 @header('Content-Type: application/json; charset=UTF-8');
 
 switch($act){
@@ -93,7 +99,31 @@ case 'set':
 	if(isset($_POST['login_apiurl'])){
 		if(!empty($_POST['login_apiurl']) && (substr($_POST['login_apiurl'],0,4)!='http' || substr($_POST['login_apiurl'],-1)!='/'))exit('{"code":-1,"msg":"聚合登录API接口地址格式错误"}');
 	}
+	$allowed_keys = ['sitename','title','keywords','description','orgname','kfqq','qqqun','appurl','verifytype',
+		'reg_open','user_review','reg_pay','reg_pay_price','reg_pay_uid','user_settings_edit',
+		'test_open','test_pay_uid','captcha_id','captcha_key','captcha_open_login',
+		'close_keylogin','user_style','cdnpublic','homepage','homepage_url',
+		'localurl','apiurl','email',
+		'pay_maxmoney','pay_minmoney','blockname','blockalert','ordername','pageordername','notifyordername',
+		'forceqq','localurl_alipay','localurl_wxpay','recharge','onecode',
+		'pay_payaddstart','pay_payaddmin','pay_payaddmax','pay_domain_open','pay_domain_forbid',
+		'alipay_paymode','user_refund','blockips','blockusers',
+		'settle_open','settle_type','settle_money','settle_rate','settle_fee_min','settle_fee_max',
+		'settle_alipay','settle_wxpay','settle_qqpay','settle_bank',
+		'modal','zhuce','footer',
+		'transfer_name','transfer_desc','transfer_alipay','transfer_wxpay','transfer_qqpay',
+		'cert_open','cert_channel','cert_appcode','cert_qcloudid','cert_qcloudkey',
+		'cert_aliyunid','cert_aliyunkey','cert_aliyunsceneid','cert_corpopen','cert_appcode2',
+		'cert_force','cert_money',
+		'login_qq','login_qq_appid','login_qq_appkey','login_alipay','login_wx',
+		'login_apiurl','login_appid','login_appkey',
+		'mail_cloud','mail_smtp','mail_port','mail_name','mail_pwd',
+		'mail_apiuser','mail_apikey','mail_name2','mail_recv',
+		'sms_api','sms_appid','sms_appkey','sms_sign','sms_tpl_reg','sms_tpl_find','sms_tpl_edit','sms_tpl_login',
+		'ip_type','template','proxy','proxy_server','proxy_port','proxy_user','proxy_pwd','proxy_type',
+		'cronkey','pay_succ_range_minute'];
 	foreach($_POST as $k=>$v){
+		if(!in_array($k, $allowed_keys)) continue;
 		saveSetting($k, $v);
 	}
 	$ad=$CACHE->clear();
@@ -115,9 +145,8 @@ case 'delGonggao':
 break;
 case 'iptype':
 	$result = [
-	['name'=>'0_X_FORWARDED_FOR', 'ip'=>real_ip(0), 'city'=>get_ip_city(real_ip(0))],
-	['name'=>'1_X_REAL_IP', 'ip'=>real_ip(1), 'city'=>get_ip_city(real_ip(1))],
-	['name'=>'2_REMOTE_ADDR', 'ip'=>real_ip(2), 'city'=>get_ip_city(real_ip(2))]
+	['name'=>'0_REMOTE_ADDR', 'ip'=>real_ip(0), 'city'=>get_ip_city(real_ip(0))],
+	['name'=>'1_代理模式', 'ip'=>real_ip(1), 'city'=>get_ip_city(real_ip(1))]
 	];
 	exit(json_encode($result));
 break;

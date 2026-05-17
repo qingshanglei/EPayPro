@@ -26,7 +26,8 @@ if(isset($_GET['act']) && $_GET['act']=='login'){
 			$session=md5($uid.$key.$password_hash);
 			$expiretime=time()+604800;
 			$token=authcode("{$uid}\t{$session}\t{$expiretime}", 'ENCODE', SYS_KEY);
-			setcookie("user_token", $token, time() + 604800);
+			setcookie("user_token", "", time() - 604800, '/user/');
+			setcookie("user_token", $token, time() + 604800, '/', '', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), true);
 			$DB->exec("update `pre_user` set `lasttime` ='$date' where `uid`='$uid'");
 			$result=array("code"=>0,"msg"=>"登录成功！正在跳转到用户中心","url"=>"./");
 		}elseif($islogin2==1){
@@ -114,7 +115,8 @@ if(isset($_GET['auth_code']) && isset($_GET['cert_verify_id'])){
 			$session=md5($uid.$key.$password_hash);
 			$expiretime=time()+604800;
 			$token=authcode("{$uid}\t{$session}\t{$expiretime}", 'ENCODE', SYS_KEY);
-			setcookie("user_token", $token, time() + 604800);
+			setcookie("user_token", "", time() - 604800, '/user/');
+			setcookie("user_token", $token, time() + 604800, '/', '', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), true);
 			@header('Content-Type: text/html; charset=UTF-8');
 			exit("<script language='javascript'>window.location.href='./';</script>");
 		}elseif($islogin2==1){
@@ -163,7 +165,9 @@ if(isset($_GET['auth_code']) && isset($_GET['cert_verify_id'])){
 	$oauth->oauth($state);
 
 }elseif(isset($_GET['logout'])){
-	setcookie("user_token", "", time() - 604800);
+	setcookie("user_token", "", time() - 604800, '/');
+	setcookie("user_token", "", time() - 604800, '/user/');
+	unset($_COOKIE['user_token']);
 	@header('Content-Type: text/html; charset=UTF-8');
 	exit("<script language='javascript'>alert('您已成功注销本次登陆！');window.location.href='./login.php';</script>");
 }elseif($islogin2==1 && isset($_GET['unbind'])){

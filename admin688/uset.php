@@ -28,6 +28,7 @@ echo '<div class="panel panel-primary">
 <div class="panel-heading"><h3 class="panel-title">添加商户</h3></div>';
 echo '<div class="panel-body">';
 echo '<form action="./uset.php?my=add_submit" method="POST">
+<input type="hidden" name="csrf_token" value="'.$_SESSION['csrf_token'].'"/>
 <h4><font color="blue">基本信息</font></h4>
 <div class="form-group">
 <label>手机号(登录账号):</label><br>
@@ -114,15 +115,15 @@ echo '<form action="./uset.php?my=edit_submit&uid='.$uid.'" method="POST">
 <h4><font color="blue">基本信息</font></h4>
 <div class="form-group">
 <label>手机号(登录账号):</label><br>
-<input type="text" class="form-control" name="phone" value="'.$row['phone'].'" placeholder="可留空">
+<input type="text" class="form-control" name="phone" value="'.htmlspecialchars($row['phone'], ENT_QUOTES, 'UTF-8').'" placeholder="可留空">
 </div>
 <div class="form-group">
 <label>邮箱(登录账号):</label><br>
-<input type="text" class="form-control" name="email" value="'.$row['email'].'" placeholder="可留空">
+<input type="text" class="form-control" name="email" value="'.htmlspecialchars($row['email'], ENT_QUOTES, 'UTF-8').'" placeholder="可留空">
 </div>
 <div class="form-group">
 <label>商户余额:</label><br>
-<input type="text" class="form-control" name="money" value="'.$row['money'].'" required>
+<input type="text" class="form-control" name="money" value="'.htmlspecialchars($row['money'], ENT_QUOTES, 'UTF-8').'" required>
 </div>
 <div class="form-group">
 <label>用户组:</label><br>
@@ -130,15 +131,15 @@ echo '<form action="./uset.php?my=edit_submit&uid='.$uid.'" method="POST">
 </div>
 <div class="form-group">
 <label>ＱＱ:</label><br>
-<input type="text" class="form-control" name="qq" value="'.$row['qq'].'" placeholder="可留空">
+<input type="text" class="form-control" name="qq" value="'.htmlspecialchars($row['qq'], ENT_QUOTES, 'UTF-8').'" placeholder="可留空">
 </div>
 <div class="form-group">
 <label>网站域名:</label><br>
-<input type="text" class="form-control" name="url" value="'.$row['url'].'" placeholder="可留空">
+<input type="text" class="form-control" name="url" value="'.htmlspecialchars($row['url'], ENT_QUOTES, 'UTF-8').'" placeholder="可留空">
 </div>
 <div class="form-group">
 <label>商品名称自定义:</label><br>
-<input type="text" class="form-control" name="ordername" value="'.$row['ordername'].'" placeholder="默认以系统设置里面的为准">
+<input type="text" class="form-control" name="ordername" value="'.htmlspecialchars($row['ordername'], ENT_QUOTES, 'UTF-8').'" placeholder="默认以系统设置里面的为准">
 <font color="green">支持变量值：[name]原商品名称，[order]支付订单号，[time]时间戳，[qq]当前商户的联系QQ</font>
 </div>
 <h4><font color="blue">结算信息</font></h4>
@@ -152,11 +153,11 @@ echo '<form action="./uset.php?my=edit_submit&uid='.$uid.'" method="POST">
 </div>
 <div class="form-group">
 <label>结算账号:</label><br>
-<input type="text" class="form-control" name="account" value="'.$row['account'].'" required>
+<input type="text" class="form-control" name="account" value="'.htmlspecialchars($row['account'], ENT_QUOTES, 'UTF-8').'" required>
 </div>
 <div class="form-group">
 <label>结算账号姓名:</label><br>
-<input type="text" class="form-control" name="username" value="'.$row['username'].'" required>
+<input type="text" class="form-control" name="username" value="'.htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8').'" required>
 </div>
 <h4><font color="blue">实名信息</font></h4>
 <div class="form-group">
@@ -170,19 +171,19 @@ echo '<form action="./uset.php?my=edit_submit&uid='.$uid.'" method="POST">
 </div>
 <div class="form-group">
 <label>真实姓名:</label><br>
-<input type="text" class="form-control" name="certname" value="'.$row['certname'].'">
+<input type="text" class="form-control" name="certname" value="'.htmlspecialchars($row['certname'], ENT_QUOTES, 'UTF-8').'">
 </div>
 <div class="form-group">
 <label>身份证号:</label><br>
-<input type="text" class="form-control" name="certno" value="'.$row['certno'].'" maxlength="18">
+<input type="text" class="form-control" name="certno" value="'.htmlspecialchars($row['certno'], ENT_QUOTES, 'UTF-8').'" maxlength="18">
 </div>
 <div class="form-group">
 <label>公司名称:</label><br>
-<input type="text" class="form-control" name="certcorpname" value="'.$row['certcorpname'].'">
+<input type="text" class="form-control" name="certcorpname" value="'.htmlspecialchars($row['certcorpname'], ENT_QUOTES, 'UTF-8').'">
 </div>
 <div class="form-group">
 <label>营业执照号码:</label><br>
-<input type="text" class="form-control" name="certcorpno" value="'.$row['certcorpno'].'" maxlength="30">
+<input type="text" class="form-control" name="certcorpno" value="'.htmlspecialchars($row['certcorpno'], ENT_QUOTES, 'UTF-8').'" maxlength="30">
 </div>
 <h4><font color="blue">功能开关</font></h4>
 <div class="form-group">
@@ -241,7 +242,7 @@ foreach(explode(',',$group_settings) as $row){
 	$arr = explode(':', $row);
 	echo '<div class="form-group">
 <label>'.$arr[1].':</label><br>
-<input type="text" class="form-control" name="setting['.$arr[0].']" value="'.$channelinfo[$arr[0]].'" required>
+<input type="text" class="form-control" name="setting['.$arr[0].']" value="'.htmlspecialchars($channelinfo[$arr[0]], ENT_QUOTES, 'UTF-8').'" required>
 </div>';
 }
 echo '<input type="submit" class="btn btn-primary btn-block" value="确定修改"></form>';
@@ -283,7 +284,7 @@ if(!empty($data['email'])){
 $uid = $DB->insert('user', $data);
 if($uid!==false){
 	if(!empty($_POST['pwd'])){
-		$pwd = getMd5Pwd(trim($_POST['pwd']), $uid);
+		$pwd = password_hash(trim($_POST['pwd']), PASSWORD_DEFAULT);
 		$DB->update('user', ['pwd'=>$pwd], ['uid'=>$uid]);
 	}
 	showmsg('添加商户成功！商户ID：'.$uid.'<br/>密钥：'.$key.'<br/><br/><a href="./ulist.php">>>返回商户列表</a>',1);
@@ -325,7 +326,7 @@ if(empty($data['account']) || empty($data['username'])) showmsg('必填项不能
 
 if($DB->update('user', $data, ['uid'=>$uid])!==false){
 	if(!empty($_POST['pwd'])){
-		$pwd = getMd5Pwd(trim($_POST['pwd']), $uid);
+		$pwd = password_hash(trim($_POST['pwd']), PASSWORD_DEFAULT);
 		$DB->update('user', ['pwd'=>$pwd], ['uid'=>$uid]);
 	}
 	showmsg('修改商户信息成功！<br/><br/><a href="./ulist.php">>>返回商户列表</a>',1);
@@ -336,13 +337,13 @@ if($DB->update('user', $data, ['uid'=>$uid])!==false){
 elseif($my=='edit2_submit')
 {
 if(!checkRefererHost())exit();
-$uid=$_GET['uid'];
-$rows=$DB->getRow("select * from pre_user where uid='$uid' limit 1");
-if(!$rows)
-	showmsg('当前商户不存在！',3);
-$setting=$_POST['setting'];
-$channelinfo = json_encode($setting);
-if($DB->update('user', ['channelinfo'=>$channelinfo], ['uid'=>$uid])!==false)
+$uid=intval($_GET['uid']);
+	$rows=$DB->getRow("select * from pre_user where uid='$uid' limit 1");
+	if(!$rows)
+		showmsg('当前商户不存在！',3);
+	$setting=$_POST['setting'];
+	$channelinfo = json_encode($setting);
+	if($DB->update('user', ['channelinfo'=>$channelinfo], ['uid'=>$uid])!==false)
 	showmsg('修改商户信息成功！<br/><br/><a href="./ulist.php">>>返回商户列表</a>',1);
 else
 	showmsg('修改商户信息失败！'.$DB->error(),4);
@@ -350,8 +351,9 @@ else
 elseif($my=='delete')
 {
 if(!checkRefererHost())exit();
-$uid=$_GET['uid'];
-$sql="DELETE FROM pre_user WHERE uid='$uid'";
+if(empty($_GET['csrf_token']) || $_GET['csrf_token'] !== $_SESSION['csrf_token'])showmsg('CSRF验证失败，请刷新页面重试',3);
+$uid=intval($_GET['uid']);
+	$sql="DELETE FROM pre_user WHERE uid='$uid'";
 if($DB->exec($sql))
 	exit("<script language='javascript'>alert('删除商户成功！');history.go(-1);</script>");
 else

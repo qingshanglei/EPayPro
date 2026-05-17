@@ -50,21 +50,19 @@ case 'sendcode':
 	$GtSdk = new \lib\GeetestLib($conf['captcha_id'], $conf['captcha_key']);
 
 	$data = array(
-		'user_id' => $uid, # 网站用户id
-		'client_type' => "web", # web:电脑上的浏览器；h5:手机上的浏览器，包括移动应用内完全内置的web_view；native：通过原生SDK植入APP应用的方式
-		'ip_address' => $clientip # 请在此处传输用户请求验证时所携带的IP
+		'user_id' => $uid,
+		'client_type' => "web",
+		'ip_address' => $clientip
 	);
 
-	if ($_SESSION['gtserver'] == 1) {   //服务器正常
+	if ($_SESSION['gtserver'] == 1) {
 		$result = $GtSdk->success_validate($_POST['geetest_challenge'], $_POST['geetest_validate'], $_POST['geetest_seccode'], $data);
 		if ($result) {
-			//echo '{"status":"success"}';
 		} else{
 			exit('{"code":-1,"msg":"验证失败，请重新验证"}');
 		}
-	}else{  //服务器宕机,走failback模式
+	}else{
 		if ($GtSdk->fail_validate($_POST['geetest_challenge'],$_POST['geetest_validate'],$_POST['geetest_seccode'])) {
-			//echo '{"status":"success"}';
 		}else{
 			exit('{"code":-1,"msg":"验证失败，请重新验证"}');
 		}
@@ -78,7 +76,7 @@ case 'sendcode':
 			if($phone==$userrow['phone']){
 				exit('{"code":-1,"msg":"你填写的手机号码和之前一样"}');
 			}
-			$row=$DB->getRow("select * from pre_user where phone='$phone' limit 1");
+			$row=$DB->getRow("select * from pre_user where phone=? limit 1", [$phone]);
 			if($row){
 				exit('{"code":-1,"msg":"该手机号码已经绑定过其它商户"}');
 			}
@@ -107,7 +105,7 @@ case 'sendcode':
 				$_SESSION['send_mail']=time();
 				exit('{"code":0,"msg":"succ"}');
 			}else{
-				exit('{"code":-1,"msg":"写入数据库失败。'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
 			exit('{"code":-1,"msg":"短信发送失败 '.$result.'"}');
@@ -121,7 +119,7 @@ case 'sendcode':
 			if($email==$userrow['email']){
 				exit('{"code":-1,"msg":"你填写的邮箱和之前一样"}');
 			}
-			$row=$DB->getRow("select * from pre_user where email='$email' limit 1");
+			$row=$DB->getRow("select * from pre_user where email=? limit 1", [$email]);
 			if($row){
 				exit('{"code":-1,"msg":"该邮箱已经绑定过其它商户"}');
 			}
@@ -155,10 +153,10 @@ case 'sendcode':
 				$_SESSION['send_mail']=time();
 				exit('{"code":0,"msg":"succ"}');
 			}else{
-				exit('{"code":-1,"msg":"写入数据库失败。'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
-			file_put_contents('mail.log',$result);
+			file_put_contents(SYSTEM_ROOT.'mail.log',$result);
 			exit('{"code":-1,"msg":"邮件发送失败"}');
 		}
 	}
@@ -216,18 +214,19 @@ case 'completeinfo':
 			exit('{"code":-1,"msg":"邮箱格式不正确"}');
 		}
 		if($email!=$userrow['email']){
-			$row=$DB->getRow("select * from pre_user where email='$email' limit 1");
+			$row=$DB->getRow("select * from pre_user where email=? limit 1", [$email]);
 			if($row){
 				exit('{"code":-1,"msg":"该邮箱已经绑定过其它商户，如需找回，请退出登录后找回密码"}');
 			}
-			$sqls=",`email` ='{$email}'";
+			$sqls=",`email` =?";
+			$params_email = [$email];
 		}
 	}
-	$sqs=$DB->exec("update `pre_user` set `settle_id` ='{$type}',`account` ='{$account}',`username` ='{$username}',`qq` ='{$qq}',`url` ='{$url}'{$sqls} where `uid`='$uid'");
+	$sqs=$DB->exec("update `pre_user` set `settle_id` =?,`account` =?,`username` =?,`qq` =?,`url` =?{$sqls} where `uid`=?", array_merge([$type, $account, $username, $qq, $url], isset($params_email)?$params_email:[], [$uid]));
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'edit_settle':
@@ -255,11 +254,11 @@ case 'edit_settle':
 		}
 		exit('{"code":2,"msg":"need verify"}');
 	}
-	$sqs=$DB->exec("update `pre_user` set `settle_id` ='{$type}',`account` ='{$account}',`username` ='{$username}' where `uid`='$uid'");
+	$sqs=$DB->exec("update `pre_user` set `settle_id` =?,`account` =?,`username` =? where `uid`=?", [$type, $account, $username, $uid]);
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'edit_info':
@@ -280,7 +279,7 @@ case 'edit_info':
 	}
 	if($conf['verifytype']==1){
 		if($email!=$userrow['email']){
-			$row=$DB->getRow("select * from pre_user where email='$email' limit 1");
+			$row=$DB->getRow("select * from pre_user where email=? limit 1", [$email]);
 			if($row){
 				exit('{"code":-1,"msg":"该邮箱已经绑定过其它商户，如需找回，请退出登录后找回密码"}');
 			}
@@ -295,7 +294,7 @@ case 'edit_info':
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'edit_channel_info':
@@ -306,7 +305,7 @@ case 'edit_channel_info':
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'edit_mode':
@@ -316,7 +315,7 @@ case 'edit_mode':
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'edit_bind':
@@ -335,9 +334,9 @@ case 'edit_bind':
 		}
 	}
 	if($conf['verifytype']==1 || $conf['verifytype']==0 && empty($email) && !empty($phone)){
-		$row=$DB->getRow("select * from pre_regcode where uid='$uid' and type=3 and `to`='$phone' order by id desc limit 1");
+		$row=$DB->getRow("select * from pre_regcode where uid=? and type=3 and `to`=? order by id desc limit 1", [$uid, $phone]);
 	}else{
-		$row=$DB->getRow("select * from pre_regcode where uid='$uid' and type=2 and `to`='$email' order by id desc limit 1");
+		$row=$DB->getRow("select * from pre_regcode where uid=? and type=2 and `to`=? order by id desc limit 1", [$uid, $email]);
 	}
 	if (!$row) {
 		exit('{"code":-1,"msg":"请重新获取验证码！"}');
@@ -348,14 +347,14 @@ case 'edit_bind':
 		exit('{"code":-1,"msg":"验证码不正确！"}');
 	}
 	if($conf['verifytype']==1 || $conf['verifytype']==0 && empty($email) && !empty($phone)){
-		$sqs=$DB->exec("update `pre_user` set `phone` ='{$phone}' where `uid`='$uid'");
+		$sqs=$DB->exec("update `pre_user` set `phone` =? where `uid`=?", [$phone, $uid]);
 	}else{
-		$sqs=$DB->exec("update `pre_user` set `email` ='{$email}' where `uid`='$uid'");
+		$sqs=$DB->exec("update `pre_user` set `email` =? where `uid`=?", [$email, $uid]);
 	}
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'checkbind':
@@ -374,7 +373,7 @@ case 'resetKey':
 		$key = random(32);
 		$sql = "UPDATE pre_user SET `key`='$key' WHERE uid='$uid'";
 		if($DB->exec($sql)!==false)exit('{"code":0,"msg":"重置密钥成功","key":"'.$key.'"}');
-		else exit('{"code":-1,"msg":"重置密钥失败['.$DB->error().']"}');
+		else exit('{"code":-1,"msg":"重置密钥失败"}');
 	}
 break;
 case 'edit_pwd':
@@ -385,7 +384,7 @@ case 'edit_pwd':
 	if(!empty($userrow['pwd']) && $oldpwd==null || $newpwd==null || $newpwd2==null){
 		exit('{"code":-1,"msg":"请确保每项都不为空"}');
 	}
-	if(!empty($userrow['pwd']) && getMd5Pwd($oldpwd, $uid)!=$userrow['pwd']){
+	if(!empty($userrow['pwd']) && !verifyPwd($oldpwd, $userrow['pwd'])){
 		exit('{"code":-1,"msg":"旧密码不正确"}');
 	}
 	if($newpwd!=$newpwd2){
@@ -403,12 +402,12 @@ case 'edit_pwd':
 	}elseif (is_numeric($newpwd)) {
 		exit('{"code":-1,"msg":"新密码不能为纯数字"}');
 	}
-	$pwd = getMd5Pwd($newpwd, $uid);
+	$pwd = password_hash($newpwd, PASSWORD_DEFAULT);
 	$sqs=$DB->exec("update `pre_user` set `pwd` ='{$pwd}' where `uid`='$uid'");
 	if($sqs!==false){
 		exit('{"code":1,"msg":"修改密码成功！请牢记新密码"}');
 	}else{
-		exit('{"code":-1,"msg":"修改密码失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"修改密码失败"}');
 	}
 break;
 case 'edit_codename':
@@ -418,7 +417,7 @@ case 'edit_codename':
 	if($sqs!==false){
 		exit('{"code":1,"msg":"保存成功！"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 	}
 break;
 case 'certificate':
@@ -431,10 +430,6 @@ case 'certificate':
 	if(empty($certname) || empty($certno))exit('{"code":-1,"msg":"请确保各项不能为空"}');
 	if(strlen($certname)<3)exit('{"code":-1,"msg":"姓名填写错误"}');
 	if(!is_idcard($certno))exit('{"code":-1,"msg":"身份证号不正确"}');
-	/*$row=$DB->getRow("SELECT uid,phone,email FROM pre_user WHERE certname=:certname AND certno=:certno AND cert=1 LIMIT 1", [':certno'=>$certno, ':certname'=>$certname]);
-	if($row){
-		exit('{"code":-2,"msg":"账号:'.($row['phone']?$row['phone']:$row['email']).'(商户ID:'.$row['uid'].')已经使用此身份认证，是否将该认证信息关联到当前商户？关联需要输入商户ID '.$row['uid'].' 的商户密钥","uid":"'.$row['uid'].'"}');
-	}*/
 	if($certtype==1){
 		$certcorpno=htmlspecialchars(strip_tags(trim($_POST['certcorpno'])));
 		$certcorpname=htmlspecialchars(strip_tags(trim($_POST['certcorpname'])));
@@ -442,7 +437,7 @@ case 'certificate':
 		$checkres = check_corp_cert($certcorpname, $certcorpno, $certname);
 		if($checkres['code']!=0)exit('{"code":-1,"msg":"'.$checkres['msg'].'"}');
 	}
-	if($conf['cert_open'] == 1){ //支付宝身份验证
+	if($conf['cert_open'] == 1){
 		if(!$conf['cert_channel'])exit('{"code":-1,"msg":"未配置支付宝身份验证通道"}');
 		$channel = \lib\Channel::get($conf['cert_channel']);
 		if(!$channel)exit('{"code":-1,"msg":"当前实名认证通道信息不存在"}');
@@ -462,12 +457,12 @@ case 'certificate':
 				}
 				exit(json_encode(['code'=>1, 'msg'=>'ok', 'certify_id'=>$certifyResult['certify_id']]));
 			}else{
-				exit('{"code":-1,"msg":"保存信息失败'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
 			exit('{"code":-1,"msg":"支付宝接口返回异常['.$certifyResult['sub_code'].']'.$certifyResult['sub_msg'].'"}');
 		}
-	}elseif($conf['cert_open'] == 2){ //手机号三要素实名认证
+	}elseif($conf['cert_open'] == 2){
 		if(empty($userrow['phone']))exit('{"code":-1,"msg":"你还未绑定手机号码"}');
 		$res = check_cert($certno, $certname, $userrow['phone']);
 		if($res['code']==0){
@@ -479,7 +474,7 @@ case 'certificate':
 		}else{
 			exit('{"code":-1,"msg":"认证结果：'.$res['msg'].'"}');
 		}
-	}elseif($conf['cert_open'] == 3){ //支付宝实名信息验证
+	}elseif($conf['cert_open'] == 3){
 		if(!$conf['cert_channel'])exit('{"code":-1,"msg":"未配置支付宝实名信息验证通道"}');
 		$channel = \lib\Channel::get($conf['cert_channel']);
 		if(!$channel)exit('{"code":-1,"msg":"当前实名认证通道信息不存在"}');
@@ -497,12 +492,12 @@ case 'certificate':
 				}
 				exit(json_encode(['code'=>1, 'msg'=>'ok', 'verify_id'=>$result['verify_id']]));
 			}else{
-				exit('{"code":-1,"msg":"保存信息失败'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
 			exit('{"code":-1,"msg":"支付宝接口返回异常['.$result['sub_code'].']'.$result['sub_msg'].'"}');
 		}
-	}elseif($conf['cert_open'] == 4){ //微信扫码实名认证
+	}elseif($conf['cert_open'] == 4){
 		if(!$conf['cert_qcloudid'] || !$conf['cert_qcloudkey'])exit('{"code":-1,"msg":"未配置腾讯云SecretId和SecretKey"}');
 		$qcloud = new \lib\QcloudFaceid($conf['cert_qcloudid'], $conf['cert_qcloudkey']);
 		$callbackurl = $siteurl.'user/alipaycertok.php?state='.$uid;
@@ -517,12 +512,12 @@ case 'certificate':
 				}
 				exit(json_encode(['code'=>1, 'msg'=>'ok', 'wx_token'=>$result['AuthToken']]));
 			}else{
-				exit('{"code":-1,"msg":"保存信息失败'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
 		}else{
 			exit('{"code":-1,"msg":"接口返回异常['.$result['Error']['Code'].']'.$result['Error']['Message'].'"}');
 		}
-	}elseif($conf['cert_open'] == 5){ //阿里云金融级实人认证
+	}elseif($conf['cert_open'] == 5){
 		if(!$conf['cert_aliyunid'] || !$conf['cert_aliyunkey'] || !$conf['cert_aliyunsceneid'])exit('{"code":-1,"msg":"未配置阿里云接口信息"}');
 		$aliyun = new \lib\AliyunCertify($conf['cert_aliyunid'], $conf['cert_aliyunkey'], $conf['cert_aliyunsceneid']);
 		$outer_order_no = date("YmdHis").rand(000,999).$uid;
@@ -538,7 +533,7 @@ case 'certificate':
 				}
 				exit(json_encode(['code'=>1, 'msg'=>'ok', 'certify_id'=>$result['Data']['certifyId']]));
 			}else{
-				exit('{"code":-1,"msg":"保存信息失败'.$DB->error().'"}');
+				exit('{"code":-1,"msg":"数据库操作失败"}');
 			}
         }else{
 			exit('{"code":-1,"msg":"接口返回异常['.$result['Code'].']'.$result['Message'].'"}');
@@ -583,36 +578,15 @@ case 'cert_query':
 		exit('{"code":1,"msg":"succ","passed":false}');
 	}
 break;
-/*case 'cert_bind':
-	$touid=intval($_POST['touid']);
-	$certname=daddslashes(htmlspecialchars(strip_tags(trim($_POST['certname']))));
-	$certno=daddslashes(htmlspecialchars(strip_tags(trim($_POST['certno']))));
-	if(!$_POST['csrf_token'] || $_POST['csrf_token']!=$_SESSION['csrf_token'])exit('{"code":-1,"msg":"CSRF TOKEN ERROR"}');
-	if($userrow['cert']==1)exit('{"code":-1,"msg":"你已完成实名认证"}');
-	if(empty($certname) || empty($certno))exit('{"code":-1,"msg":"请确保各项不能为空"}');
-	if(strlen($certname)<3)exit('{"code":-1,"msg":"姓名填写错误"}');
-	if(!is_idcard($certno))exit('{"code":-1,"msg":"身份证号不正确"}');
-	$row=$DB->getRow("SELECT uid,certname,certno,cert FROM pre_user WHERE uid='$touid' LIMIT 1");
-	if($row && $row['cert']==1 && $row['certname']==$certname && $row['certno']==$certno){
-		$sqs=$DB->exec("update `pre_user` set `cert`='1',`certno`='{$certno}',`certname`='{$certname}',`certtime`='{$date}' where `uid`='$uid'");
-		if($sqs!==false){
-			exit('{"code":1,"msg":"关联实名认证成功！"}');
-		}else{
-			exit('{"code":-1,"msg":"关联实名认证失败！'.$DB->error().'"}');
-		}
-	}else{
-		exit('{"code":-1,"msg":"关联实名认证失败！"}');
-	}
-break;*/
 case 'notify':
-	$trade_no=daddslashes(trim($_POST['trade_no']));
-	$row=$DB->getRow("select * from pre_order where trade_no='$trade_no' AND uid=$uid limit 1");
+	$trade_no=trim($_POST['trade_no']);
+	$row=$DB->getRow("select * from pre_order where trade_no=? AND uid=? limit 1", [$trade_no, $uid]);
 	if(!$row)
 		exit('{"code":-1,"msg":"当前订单不存在！"}');
 	if($row['status']==0)exit('{"code":-1,"msg":"订单尚未支付，无法重新通知！"}');
 	$url=creat_callback_user($row,$userrow['key']);
 	if($row['notify']>0)
-		$DB->exec("update pre_order set notify=0 where trade_no='$trade_no'");
+		$DB->exec("update pre_order set notify=0 where trade_no=?", [$trade_no]);
 	exit('{"code":0,"url":"'.($_POST['isreturn']==1?$url['return']:$url['notify']).'"}');
 break;
 case 'settle_result':
@@ -629,7 +603,6 @@ case 'recharge':
 	$name = '充值余额 UID:'.$uid;
 	if(!$_POST['csrf_token'] || $_POST['csrf_token']!=$_SESSION['csrf_token'])exit('{"code":-1,"msg":"CSRF TOKEN ERROR"}');
 	if($userrow['pay']==0)exit('{"code":-1,"msg":"当前商户已被封禁"}');
-	//if($conf['cert_force']==1 && $userrow['cert']==0)exit('{"code":-1,"msg":"当前商户未完成实名认证，无法收款"}');
 	if($money<=0 || !is_numeric($money) || !preg_match('/^[0-9.]+$/', $money))exit('{"code":-1,"msg":"金额不合法"}');
 	if($conf['pay_maxmoney']>0 && $money>$conf['pay_maxmoney'])exit('{"code":-1,"msg":"最大支付金额是'.$conf['pay_maxmoney'].'元"}');
 	if($conf['pay_minmoney']>0 && $money<$conf['pay_minmoney'])exit('{"code":-1,"msg":"最小支付金额是'.$conf['pay_minmoney'].'元"}');
@@ -699,13 +672,13 @@ case 'addDomain':
 	if(!checkDomain($domain))exit('{"code":-1,"msg":"域名格式不正确"}');
 	if($DB->getRow("select * from pre_domain where uid=:uid and domain=:domain limit 1", [':uid'=>$uid, ':domain'=>$domain]))
 		exit('{"code":-1,"msg":"该域名已存在，请勿重复添加"}');
-	if(!$DB->exec("INSERT INTO `pre_domain` (`uid`,`domain`,`status`,`addtime`) VALUES (:uid, :domain, 0, NOW())", [':uid'=>$uid, ':domain'=>$domain]))exit('{"code":-1,"msg":"添加失败'.$DB->error().'"}');
+	if(!$DB->exec("INSERT INTO `pre_domain` (`uid`,`domain`,`status`,`addtime`) VALUES (:uid, :domain, 0, NOW())", [':uid'=>$uid, ':domain'=>$domain]))exit('{"code":-1,"msg":"添加域名失败"}');
 	exit(json_encode(['code'=>0, 'msg'=>'添加域名成功！']));
 break;
 case 'delDomain':
 	if(!$conf['pay_domain_open']) exit('{"code":-1,"msg":"未开启授权支付域名添加"}');
 	$id = intval($_POST['id']);
-	if(!$DB->exec("DELETE FROM pre_domain WHERE id='$id' and uid='$uid'"))exit('{"code":-1,"msg":"删除失败'.$DB->error().'"}');
+	if(!$DB->exec("DELETE FROM pre_domain WHERE id='$id' and uid='$uid'"))exit('{"code":-1,"msg":"删除域名失败"}');
 	exit(json_encode(['code'=>0, 'msg'=>'succ']));
 break;
 
@@ -790,7 +763,7 @@ case 'recordList':
 	exit(json_encode(['total'=>$total, 'rows'=>$list]));
 break;
 
-case 'refund_query': //退款查询
+case 'refund_query':
 	if(!$conf['user_refund'])exit('{"code":-1,"msg":"未开启商户后台自助退款"}');
 	$trade_no=daddslashes(trim($_POST['trade_no']));
 	$row=$DB->getRow("select * from pre_order where trade_no='$trade_no' and uid='$uid' limit 1");
@@ -810,13 +783,13 @@ case 'refund_query': //退款查询
 	$money = $row['money'];
 	exit(json_encode(['code'=>0, 'money'=>$money]));
 break;
-case 'refund_submit': //确认退款
+case 'refund_submit':
 	if(!$conf['user_refund'])exit('{"code":-1,"msg":"未开启商户后台自助退款"}');
 	$trade_no=daddslashes(trim($_POST['trade_no']));
 	$pwd=trim($_POST['pwd']);
 	$money = trim($_POST['money']);
 	if(!is_numeric($money) || !preg_match('/^[0-9.]+$/', $money))exit('{"code":-1,"msg":"金额输入错误"}');
-	if(getMd5Pwd($pwd, $userrow['uid'])!=$userrow['pwd'])
+	if(!verifyPwd($pwd, $userrow['pwd']))
 		exit('{"code":-1,"msg":"登录密码输入错误！"}');
 	$row=$DB->getRow("select uid,money,getmoney,status,channel from pre_order where trade_no='$trade_no' and uid='$uid' limit 1");
 	if(!$row)

@@ -5,6 +5,12 @@ $act=isset($_GET['act'])?daddslashes($_GET['act']):null;
 
 if(!checkRefererHost())exit('{"code":403}');
 
+if($_SERVER['REQUEST_METHOD']=='POST'){
+    if(empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']){
+        exit('{"code":-1,"msg":"CSRF验证失败，请刷新页面重试"}');
+    }
+}
+
 @header('Content-Type: application/json; charset=UTF-8');
 
 switch($act){
@@ -55,7 +61,7 @@ case 'create_batch':
 break;
 case 'complete_batch':
 	$batch=trim($_POST['batch']);
-	$DB->exec("UPDATE pre_settle SET status=1 WHERE batch='$batch'");
+	$DB->exec("UPDATE pre_settle SET status=1 WHERE batch=?", [$batch]);
 	exit('{"code":0,"msg":"succ"}');
 break;
 case 'setSettleStatus':
@@ -65,7 +71,7 @@ case 'setSettleStatus':
 		if($DB->exec("DELETE FROM pre_settle WHERE id='$id'"))
 			exit('{"code":200}');
 		else
-			exit('{"code":400,"msg":"删除记录失败！['.$DB->error().']"}');
+			exit('{"code":400,"msg":"删除记录失败！"}');
 	}else{
 		if($status==1){
 			$sql = "update pre_settle set status='$status',endtime='$date',result=NULL where id='$id'";
@@ -75,14 +81,15 @@ case 'setSettleStatus':
 		if($DB->exec($sql)!==false)
 			exit('{"code":200}');
 		else
-			exit('{"code":400,"msg":"修改记录失败！['.$DB->error().']"}');
+			exit('{"code":400,"msg":"修改记录失败！"}');
 	}
 break;
 case 'opslist':
-	$status=$_POST['status'];
+	$status=intval($_POST['status']);
 	$checkbox=$_POST['checkbox'];
 	$i=0;
 	foreach($checkbox as $id){
+		$id=intval($id);
 		if($status==4){
 			$sql = "DELETE FROM pre_settle WHERE id='$id'";
 		}elseif($status==1){
@@ -109,11 +116,11 @@ case 'settle_setresult':
 	$row=$DB->getRow("select * from pre_settle where id='$id' limit 1");
 	if(!$row)
 		exit('{"code":-1,"msg":"当前结算记录不存在！"}');
-	$sds = $DB->exec("UPDATE pre_settle SET result='$result' WHERE id='$id'");
+	$sds = $DB->exec("UPDATE pre_settle SET result=? WHERE id='$id'", [$result]);
 	if($sds!==false)
 		exit('{"code":0,"msg":"修改成功！"}');
 	else
-		exit('{"code":-1,"msg":"修改失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"修改失败！"}');
 break;
 case 'settle_info':
 	$id=intval($_GET['id']);
@@ -121,8 +128,8 @@ case 'settle_info':
 	if(!$rows)
 		exit('{"code":-1,"msg":"当前结算记录不存在！"}');
 	$data = '<div class="form-group"><div class="input-group"><div class="input-group-addon">结算方式</div><select class="form-control" id="pay_type" default="'.$rows['type'].'">'.($conf['settle_alipay']?'<option value="1">支付宝</option>':null).''.($conf['settle_wxpay']?'<option value="2">微信</option>':null).''.($conf['settle_qqpay']?'<option value="3">QQ钱包</option>':null).''.($conf['settle_bank']?'<option value="4">银行卡</option>':null).'</select></div></div>';
-	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">结算账号</div><input type="text" id="pay_account" value="'.$rows['account'].'" class="form-control" required/></div></div>';
-	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">真实姓名</div><input type="text" id="pay_name" value="'.$rows['username'].'" class="form-control" required/></div></div>';
+	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">结算账号</div><input type="text" id="pay_account" value="'.htmlspecialchars($rows['account'], ENT_QUOTES, 'UTF-8').'" class="form-control" required/></div></div>';
+	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">真实姓名</div><input type="text" id="pay_name" value="'.htmlspecialchars($rows['username'], ENT_QUOTES, 'UTF-8').'" class="form-control" required/></div></div>';
 	$data .= '<input type="submit" id="save" onclick="saveInfo('.$id.')" class="btn btn-primary btn-block" value="保存">';
 	$result=array("code"=>0,"msg"=>"succ","data"=>$data,"pay_type"=>$rows['type']);
 	exit(json_encode($result));
@@ -136,10 +143,10 @@ case 'settle_save':
 	if($sds!==false)
 		exit('{"code":0,"msg":"修改记录成功！"}');
 	else
-		exit('{"code":-1,"msg":"修改记录失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"修改记录失败！"}');
 break;
 case 'paypwd_check':
-	if(isset($_SESSION['paypwd']) && $_SESSION['paypwd']==$conf['admin_paypwd'])
+	if(isset($_SESSION['paypwd']) && $_SESSION['paypwd']===$conf['admin_paypwd'])
 		exit('{"code":0,"msg":"ok"}');
 	else
 		exit('{"code":-1,"msg":"error"}');
@@ -147,12 +154,11 @@ break;
 case 'paypwd_input':
 	$paypwd=trim($_POST['paypwd']);
 	if(!$conf['admin_paypwd'])exit('{"code":-1,"msg":"你还未设置支付密码"}');
-	if($paypwd == $conf['admin_paypwd']){
-		$_SESSION['paypwd'] = $paypwd;
-		exit('{"code":0,"msg":"ok"}');
-	}else{
+	if(!password_verify($paypwd, $conf['admin_paypwd'])){
 		exit('{"code":-1,"msg":"支付密码错误！"}');
 	}
+	$_SESSION['paypwd'] = $conf['admin_paypwd'];
+	exit('{"code":0,"msg":"ok"}');
 break;
 case 'paypwd_reset':
 	unset($_SESSION['paypwd']);

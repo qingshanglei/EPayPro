@@ -5,10 +5,10 @@ create table `pre_config` (
 PRIMARY KEY  (`k`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `pre_config` VALUES ('version', '2024');
+INSERT INTO `pre_config` VALUES ('version', '0.01');
 INSERT INTO `pre_config` VALUES ('admin_user', 'admin');
-INSERT INTO `pre_config` VALUES ('admin_pwd', '123456');
-INSERT INTO `pre_config` VALUES ('admin_paypwd', '123456');
+INSERT INTO `pre_config` VALUES ('admin_pwd', '$2y$10$7xx4c45d0GJIv8mqgghK.uJ6UAZ9JvmVH.eZX1KigcPoNrueFNSjO');
+INSERT INTO `pre_config` VALUES ('admin_paypwd', '$2y$10$7xx4c45d0GJIv8mqgghK.uJ6UAZ9JvmVH.eZX1KigcPoNrueFNSjO');
 INSERT INTO `pre_config` VALUES ('homepage', '0');
 INSERT INTO `pre_config` VALUES ('sitename', '聚合易支付');
 INSERT INTO `pre_config` VALUES ('title', '聚合易支付 - 行业领先的免签约支付平台');
@@ -219,7 +219,7 @@ CREATE TABLE `pre_user` (
   `gid` int(11) unsigned NOT NULL DEFAULT 0,
   `upid` int(11) unsigned NOT NULL DEFAULT 0,
   `key` varchar(32) NOT NULL,
-  `pwd` varchar(32) DEFAULT NULL,
+  `pwd` varchar(255) DEFAULT NULL,
   `account` varchar(128) DEFAULT NULL,
   `username` varchar(128) DEFAULT NULL,
   `codename` varchar(32) DEFAULT NULL,

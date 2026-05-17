@@ -15,26 +15,55 @@ if(isset($_POST['user']) && isset($_POST['pass'])){
 		unset($_SESSION['vc_code']);
 		@header('Content-Type: text/html; charset=UTF-8');
 		exit("<script language='javascript'>alert('验证码错误！');history.go(-1);</script>");
-	}elseif($_SESSION['pass_error']>5) {
+	}
+	$lock_time = 0;
+	if($_SESSION['pass_error']>=10) $lock_time = 3600;
+	elseif($_SESSION['pass_error']>=8) $lock_time = 1800;
+	elseif($_SESSION['pass_error']>=5) $lock_time = 900;
+	elseif($_SESSION['pass_error']>=3) $lock_time = 300;
+	if($lock_time > 0 && isset($_SESSION['lock_until']) && time() < $_SESSION['lock_until']){
+		$remain = $_SESSION['lock_until'] - time();
+		$min = floor($remain / 60);
+		$sec = $remain % 60;
 		@header('Content-Type: text/html; charset=UTF-8');
-		exit("<script language='javascript'>alert('用户名或密码不正确！');history.go(-1);</script>");
-	}elseif($user==$conf['admin_user'] && $pass==$conf['admin_pwd']) {
+		exit("<script language='javascript'>alert('登录已锁定，请{$min}分{$sec}秒后再试');history.go(-1);</script>");
+	}
+	if($lock_time > 0 && (!isset($_SESSION['lock_until']) || time() >= $_SESSION['lock_until'])){
+		$_SESSION['lock_until'] = time() + $lock_time;
+		$remain = $lock_time;
+		$min = floor($remain / 60);
+		$sec = $remain % 60;
+		@header('Content-Type: text/html; charset=UTF-8');
+		exit("<script language='javascript'>alert('登录错误次数过多，请{$min}分{$sec}秒后再试');history.go(-1);</script>");
+	}
+	if($user==$conf['admin_user'] && password_verify($pass, $conf['admin_pwd'])) {
 		//$city=get_ip_city($clientip);
+		$_SESSION['pass_error']=0;
+		unset($_SESSION['lock_until']);
 		$DB->exec("insert into `pre_log` (`uid`,`type`,`date`,`ip`,`city`) values (0,'登录后台','".$date."','".$clientip."','".$city."')");
-		$session=md5($user.$pass.$password_hash);
+		$session=md5($user.$conf['admin_pwd'].$password_hash);
 		$expiretime=time()+604800;
 		$token=authcode("{$user}\t{$session}\t{$expiretime}", 'ENCODE', SYS_KEY);
-		setcookie("admin_token", $token, time() + 604800);
+		setcookie("admin_token", "", time() - 604800, '/admin688/');
+		setcookie("admin_token", $token, time() + 604800, '/', '', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), true);
 		@header('Content-Type: text/html; charset=UTF-8');
 		exit("<script language='javascript'>alert('登陆管理中心成功！');window.location.href='./';</script>");
 	}else {
 		$_SESSION['pass_error']++;
+		$remaining = 3 - $_SESSION['pass_error'];
+		if($remaining < 0) $remaining = 0;
 		@header('Content-Type: text/html; charset=UTF-8');
-		exit("<script language='javascript'>alert('用户名或密码不正确！');history.go(-1);</script>");
+		if($_SESSION['pass_error'] < 3){
+			exit("<script language='javascript'>alert('用户名或密码不正确！您还可以尝试{$remaining}次');history.go(-1);</script>");
+		}else{
+			exit("<script language='javascript'>alert('用户名或密码不正确！');history.go(-1);</script>");
+		}
 	}
 }elseif(isset($_GET['logout'])){
 	if(!checkRefererHost())exit();
-	setcookie("admin_token", "", time() - 604800);
+	setcookie("admin_token", "", time() - 604800, '/');
+	setcookie("admin_token", "", time() - 604800, '/admin688/');
+	unset($_COOKIE['admin_token']);
 	@header('Content-Type: text/html; charset=UTF-8');
 	exit("<script language='javascript'>alert('您已成功注销本次登陆！');window.location.href='./login.php';</script>");
 }elseif($islogin==1){
@@ -71,7 +100,7 @@ include './head.php';
           <form action="./login.php" method="post" class="form-horizontal" role="form">
             <div class="input-group">
               <span class="input-group-addon"><span class="glyphicon glyphicon-user"></span></span>
-              <input type="text" name="user" value="<?php echo @$_POST['user'];?>" class="form-control input-lg" placeholder="用户名" required="required"/>
+              <input type="text" name="user" value="<?php echo htmlspecialchars(@$_POST['user'], ENT_QUOTES, 'UTF-8');?>" class="form-control input-lg" placeholder="用户名" required="required"/>
             </div><br/>
             <div class="input-group">
               <span class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></span>

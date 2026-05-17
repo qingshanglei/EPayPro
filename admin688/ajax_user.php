@@ -5,6 +5,12 @@ $act=isset($_GET['act'])?daddslashes($_GET['act']):null;
 
 if(!checkRefererHost())exit('{"code":403}');
 
+if($_SERVER['REQUEST_METHOD']=='POST'){
+    if(empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']){
+        exit('{"code":-1,"msg":"CSRF验证失败，请刷新页面重试"}');
+    }
+}
+
 @header('Content-Type: application/json; charset=UTF-8');
 
 switch($act){
@@ -17,9 +23,13 @@ case 'userList':
 	unset($rs);
 
 	$sql=" 1=1";
+	$params = [];
 	if(isset($_POST['dstatus']) && !empty($_POST['dstatus'])) {
 		$dstatus = explode('_',$_POST['dstatus']);
-		$sql.=" AND `{$dstatus[0]}`='{$dstatus[1]}'";
+		$allowed_dstatus = ['status','pay','settle','cert','mode'];
+		if(!in_array($dstatus[0], $allowed_dstatus)) exit('{"code":-1,"msg":"非法参数"}');
+		$sql.=" AND `{$dstatus[0]}`=?";
+		$params[] = $dstatus[1];
 	}
 	if(isset($_POST['gid']) && $_POST['gid']!=='') {
 		$gid = intval($_POST['gid']);
@@ -30,12 +40,15 @@ case 'userList':
 		$sql.=" AND `upid`='$upid'";
 	}
 	if(isset($_POST['value']) && !empty($_POST['value'])) {
-		$sql.=" AND `{$_POST['column']}`='{$_POST['value']}'";
+		$allowed_columns = ['uid','username','account','email','phone','qq','url','domain','gid','status','pay','settle','cert','mode'];
+		if(!in_array($_POST['column'], $allowed_columns)) exit('{"code":-1,"msg":"非法参数"}');
+		$sql.=" AND `{$_POST['column']}`=?";
+		$params[] = $_POST['value'];
 	}
 	$offset = intval($_POST['offset']);
 	$limit = intval($_POST['limit']);
-	$total = $DB->getColumn("SELECT count(*) from pre_user WHERE{$sql}");
-	$list = $DB->getAll("SELECT * FROM pre_user WHERE{$sql} order by uid desc limit $offset,$limit");
+	$total = $DB->getColumn("SELECT count(*) from pre_user WHERE{$sql}", $params);
+	$list = $DB->getAll("SELECT * FROM pre_user WHERE{$sql} order by uid desc limit $offset,$limit", $params);
 	$list2 = [];
 	foreach($list as $row){
 		if($row['endtime']!=null && strtotime($row['endtime'])<time()){
@@ -53,13 +66,17 @@ break;
 
 case 'recordList':
 	$sql=" 1=1";
+	$params = [];
 	if(isset($_POST['value']) && !empty($_POST['value'])) {
-		$sql.=" AND `{$_POST['column']}`='{$_POST['value']}'";
+		$allowed_columns = ['uid','type','money','trade_no','addtime'];
+		if(!in_array($_POST['column'], $allowed_columns)) exit('{"code":-1,"msg":"非法参数"}');
+		$sql.=" AND `{$_POST['column']}`=?";
+		$params[] = $_POST['value'];
 	}
 	$offset = intval($_POST['offset']);
 	$limit = intval($_POST['limit']);
-	$total = $DB->getColumn("SELECT count(*) from pre_record WHERE{$sql}");
-	$list = $DB->getAll("SELECT * FROM pre_record WHERE{$sql} order by id desc limit $offset,$limit");
+	$total = $DB->getColumn("SELECT count(*) from pre_record WHERE{$sql}", $params);
+	$list = $DB->getAll("SELECT * FROM pre_record WHERE{$sql} order by id desc limit $offset,$limit", $params);
 
 	exit(json_encode(['total'=>$total, 'rows'=>$list]));
 break;
@@ -117,25 +134,32 @@ break;
 
 case 'logList':
 	$sql=" 1=1";
+	$params = [];
 	if(isset($_POST['value']) && $_POST['value']!=='') {
-		$sql.=" AND `{$_POST['column']}`='{$_POST['value']}'";
+		$allowed_columns = ['uid','type','action','addtime','ip'];
+		if(!in_array($_POST['column'], $allowed_columns)) exit('{"code":-1,"msg":"非法参数"}');
+		$sql.=" AND `{$_POST['column']}`=?";
+		$params[] = $_POST['value'];
 	}
 	$offset = intval($_POST['offset']);
 	$limit = intval($_POST['limit']);
-	$total = $DB->getColumn("SELECT count(*) from pre_log WHERE{$sql}");
-	$list = $DB->getAll("SELECT * FROM pre_log WHERE{$sql} order by id desc limit $offset,$limit");
+	$total = $DB->getColumn("SELECT count(*) from pre_log WHERE{$sql}", $params);
+	$list = $DB->getAll("SELECT * FROM pre_log WHERE{$sql} order by id desc limit $offset,$limit", $params);
 
 	exit(json_encode(['total'=>$total, 'rows'=>$list]));
 break;
 
 case 'domainList':
 	$sql=" 1=1";
+	$params = [];
 	if(isset($_POST['uid']) && !empty($_POST['uid'])) {
 		$uid = intval($_POST['uid']);
 		$sql.=" AND `uid`='$uid'";
 	}
 	if(isset($_POST['kw']) && !empty($_POST['kw'])) {
-		$sql.=" AND `domain`='{$_POST['kw']}'";
+		$kw = trim($_POST['kw']);
+		$sql.=" AND `domain`=?";
+		$params[] = $kw;
 	}
 	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
 		$dstatus = intval($_POST['dstatus']);
@@ -143,13 +167,13 @@ case 'domainList':
 	}
 	$offset = intval($_POST['offset']);
 	$limit = intval($_POST['limit']);
-	$total = $DB->getColumn("SELECT count(*) from pre_domain WHERE{$sql}");
-	$list = $DB->getAll("SELECT * FROM pre_domain WHERE{$sql} order by id desc limit $offset,$limit");
+	$total = $DB->getColumn("SELECT count(*) from pre_domain WHERE{$sql}", $params);
+	$list = $DB->getAll("SELECT * FROM pre_domain WHERE{$sql} order by id desc limit $offset,$limit", $params);
 
 	exit(json_encode(['total'=>$total, 'rows'=>$list]));
 break;
 
-case 'getGroup': //用户组
+case 'getGroup':
 	$gid=intval($_GET['gid']);
 	$row=$DB->getRow("select * from pre_group where gid='$gid' limit 1");
 	if(!$row)
@@ -164,7 +188,7 @@ case 'delGroup':
 		exit('{"code":-1,"msg":"当前用户组不存在！"}');
 	$sql = "DELETE FROM pre_group WHERE gid='$gid'";
 	if($DB->exec($sql))exit('{"code":0,"msg":"删除用户组成功！"}');
-	else exit('{"code":-1,"msg":"删除用户组失败['.$DB->error().']"}');
+	else exit('{"code":-1,"msg":"删除用户组失败"}');
 break;
 case 'saveGroup':
 	if($_POST['action'] == 'add'){
@@ -180,13 +204,13 @@ case 'saveGroup':
 		if($settings && !checkGroupSettings($settings))exit('{"code":-1,"msg":"用户变量格式不正确"}');
 		$sql = "INSERT INTO pre_group (name, info, settle_open, settle_type, settings) VALUES ('{$name}', '{$info}', '{$settle_open}', '{$settle_type}', '{$settings}')";
 		if($DB->exec($sql))exit('{"code":0,"msg":"新增用户组成功！"}');
-		else exit('{"code":-1,"msg":"新增用户组失败['.$DB->error().']"}');
+		else exit('{"code":-1,"msg":"新增用户组失败"}');
 	}elseif($_POST['action'] == 'changebuy'){
 		$gid=intval($_POST['gid']);
 		$status=intval($_POST['status']);
 		$sql = "UPDATE pre_group SET isbuy='{$status}' WHERE gid='$gid'";
 		if($DB->exec($sql))exit('{"code":0,"msg":"修改上架状态成功！"}');
-		else exit('{"code":-1,"msg":"修改上架状态失败['.$DB->error().']"}');
+		else exit('{"code":-1,"msg":"修改上架状态失败"}');
 	}else{
 		$gid=intval($_POST['gid']);
 		$name=trim($_POST['name']);
@@ -201,7 +225,7 @@ case 'saveGroup':
 		if($settings && !checkGroupSettings($settings))exit('{"code":-1,"msg":"用户变量格式不正确"}');
 		$sql = "UPDATE pre_group SET name='{$name}',info='{$info}',settle_open='{$settle_open}',settle_type='{$settle_type}',settings='{$settings}' WHERE gid='$gid'";
 		if($DB->exec($sql)!==false)exit('{"code":0,"msg":"修改用户组成功！"}');
-		else exit('{"code":-1,"msg":"修改用户组失败['.$DB->error().']"}');
+		else exit('{"code":-1,"msg":"修改用户组失败"}');
 	}
 break;
 case 'saveGroupPrice':
@@ -226,21 +250,21 @@ case 'setUser':
 	elseif($type=='group')$sql = "UPDATE pre_user SET gid='$status' WHERE uid='$uid'";
 	else $sql = "UPDATE pre_user SET status='$status' WHERE uid='$uid'";
 	if($DB->exec($sql)!==false)exit('{"code":0,"msg":"修改用户成功！"}');
-	else exit('{"code":-1,"msg":"修改用户失败['.$DB->error().']"}');
+	else exit('{"code":-1,"msg":"修改用户失败"}');
 break;
 case 'setUserGroup':
 	$uid=intval($_POST['uid']);
 	$gid=intval($_POST['gid']);
 	$endtime=trim($_POST['endtime']);
 	if(changeUserGroup($uid, $gid, $endtime)!==false)exit('{"code":0,"msg":"修改用户成功！"}');
-	else exit('{"code":-1,"msg":"修改用户失败['.$DB->error().']"}');
+	else exit('{"code":-1,"msg":"修改用户失败"}');
 break;
 case 'resetUser':
 	$uid=intval($_GET['uid']);
 	$key = random(32);
 	$sql = "UPDATE pre_user SET `key`='$key' WHERE uid='$uid'";
 	if($DB->exec($sql)!==false)exit('{"code":0,"msg":"重置密钥成功","key":"'.$key.'"}');
-	else exit('{"code":-1,"msg":"重置密钥失败['.$DB->error().']"}');
+	else exit('{"code":-1,"msg":"重置密钥失败"}');
 break;
 case 'user_settle_info':
 	$uid=intval($_GET['uid']);
@@ -248,8 +272,8 @@ case 'user_settle_info':
 	if(!$rows)
 		exit('{"code":-1,"msg":"当前用户不存在！"}');
 	$data = '<div class="form-group"><div class="input-group"><div class="input-group-addon">结算方式</div><select class="form-control" id="pay_type" default="'.$rows['settle_id'].'">'.($conf['settle_alipay']?'<option value="1">支付宝</option>':null).''.($conf['settle_wxpay']?'<option value="2">微信</option>':null).''.($conf['settle_qqpay']?'<option value="3">QQ钱包</option>':null).''.($conf['settle_bank']?'<option value="4">银行卡</option>':null).'</select></div></div>';
-	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">结算账号</div><input type="text" id="pay_account" value="'.$rows['account'].'" class="form-control" required/></div></div>';
-	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">真实姓名</div><input type="text" id="pay_name" value="'.$rows['username'].'" class="form-control" required/></div></div>';
+	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">结算账号</div><input type="text" id="pay_account" value="'.htmlspecialchars($rows['account'], ENT_QUOTES, 'UTF-8').'" class="form-control" required/></div></div>';
+	$data .= '<div class="form-group"><div class="input-group"><div class="input-group-addon">真实姓名</div><input type="text" id="pay_name" value="'.htmlspecialchars($rows['username'], ENT_QUOTES, 'UTF-8').'" class="form-control" required/></div></div>';
 	$data .= '<input type="submit" id="save" onclick="saveInfo('.$uid.')" class="btn btn-primary btn-block" value="保存">';
 	$result=array("code"=>0,"msg"=>"succ","data"=>$data,"pay_type"=>$rows['settle_id']);
 	exit(json_encode($result));
@@ -263,7 +287,7 @@ case 'user_settle_save':
 	if($sds!==false)
 		exit('{"code":0,"msg":"修改记录成功！"}');
 	else
-		exit('{"code":-1,"msg":"修改记录失败！'.$DB->error().'"}');
+		exit('{"code":-1,"msg":"数据库操作失败"}');
 break;
 case 'user_cert':
 	$uid=intval($_GET['uid']);
@@ -300,19 +324,19 @@ case 'addDomain':
 		exit('{"code":-1,"msg":"当前用户不存在！"}');
 	if($DB->getRow("select * from pre_domain where uid=:uid and domain=:domain limit 1", [':uid'=>$uid, ':domain'=>$domain]))
 		exit('{"code":-1,"msg":"该域名已存在，请勿重复添加"}');
-	if(!$DB->exec("INSERT INTO `pre_domain` (`uid`,`domain`,`status`,`addtime`,`endtime`) VALUES (:uid, :domain, 1, NOW(), NOW())", [':uid'=>$uid, ':domain'=>$domain]))exit('{"code":-1,"msg":"添加失败'.$DB->error().'"}');
+	if(!$DB->exec("INSERT INTO `pre_domain` (`uid`,`domain`,`status`,`addtime`,`endtime`) VALUES (:uid, :domain, 1, NOW(), NOW())", [':uid'=>$uid, ':domain'=>$domain]))exit('{"code":-1,"msg":"添加域名失败"}');
 	exit(json_encode(['code'=>0, 'msg'=>'添加域名成功！']));
 break;
 case 'setDomainStatus':
 	$id=intval($_POST['id']);
 	$status=intval($_POST['status']);
 	if($DB->exec("UPDATE pre_domain SET status='$status',endtime=NOW() WHERE id='$id'")!==false)exit('{"code":0,"msg":"succ"}');
-	else exit('{"code":-1,"msg":"修改失败['.$DB->error().']"}');
+	else exit('{"code":-1,"msg":"修改失败"}');
 break;
 case 'delDomain':
 	$id=intval($_POST['id']);
 	if($DB->exec("DELETE FROM pre_domain WHERE id='$id'")!==false)exit('{"code":0,"msg":"succ"}');
-	else exit('{"code":-1,"msg":"删除失败['.$DB->error().']"}');
+	else exit('{"code":-1,"msg":"删除失败"}');
 break;
 default:
 	exit('{"code":-4,"msg":"No Act"}');

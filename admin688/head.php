@@ -12,12 +12,18 @@ if($admin_cdnpublic==1){
 	$cdnpublic = '//cdn.staticfile.org/';
 }
 ?>
+<?php
+if(empty($_SESSION['csrf_token'])){
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+?>
 <!DOCTYPE html>
 <html lang="zh-cn">
 <head>
   <meta charset="utf-8"/>
   <meta name="renderer" content="webkit">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="csrf-token" content="<?php echo $_SESSION['csrf_token']; ?>">
   <title><?php echo $title ?></title>
   <link href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="../assets/css/bootstrap.min.css" rel="stylesheet"/>
@@ -26,6 +32,11 @@ if($admin_cdnpublic==1){
   <script src="<?php echo $cdnpublic?>modernizr/2.8.3/modernizr.min.js"></script>
   <script src="<?php echo $cdnpublic?>jquery/2.1.4/jquery.min.js"></script>
   <script src="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script>
+  $.ajaxSetup({
+    data: {csrf_token: $('meta[name="csrf-token"]').attr('content')}
+  });
+  </script>
   <!--[if lt IE 9]>
     <script src="<?php echo $cdnpublic?>html5shiv/3.7.3/html5shiv.min.js"></script>
     <script src="<?php echo $cdnpublic?>respond.js/1.4.2/respond.min.js"></script>

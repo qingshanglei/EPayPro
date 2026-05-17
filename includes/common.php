@@ -2,8 +2,8 @@
 //error_reporting(0);
 error_reporting(E_ERROR | E_PARSE | E_COMPILE_ERROR);
 if(defined('IN_CRONLITE'))return;
-define('VERSION', '3045');
-define('DB_VERSION', '2024');
+define('VERSION', '0.01');
+define('DB_VERSION', '0.01');
 define('IN_CRONLITE', true);
 define('SYSTEM_ROOT', dirname(__FILE__).'/');
 define('ROOT', dirname(SYSTEM_ROOT).'/');
@@ -69,6 +69,12 @@ exit();
 
 $CACHE=new \lib\Cache();
 $conf=$CACHE->pre_fetch();
+if(empty($conf['syskey'])){
+    $syskey = bin2hex(random_bytes(16));
+    $DB->exec("REPLACE INTO pre_config SET v=:v,k=:k", [':v'=>$syskey, ':k'=>'syskey']);
+    $conf['syskey'] = $syskey;
+    $CACHE->update();
+}
 define('SYS_KEY', $conf['syskey']);
 if(!$conf['localurl'])$conf['localurl'] = $siteurl;
 $password_hash='!@#%!s!0';

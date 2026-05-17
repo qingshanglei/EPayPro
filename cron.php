@@ -15,7 +15,8 @@ if (function_exists("ignore_user_abort"))
 @header('Content-Type: text/html; charset=UTF-8');
 
 if(empty($conf['cronkey']))exit("请先设置好监控密钥");
-if($conf['cronkey']!=$_GET['key'])exit("监控密钥不正确");
+$cronkey = isset($_POST['key']) ? $_POST['key'] : (isset($_GET['key']) ? $_GET['key'] : '');
+if(!hash_equals($conf['cronkey'], $cronkey))exit("监控密钥不正确");
 
 if($_GET['do']=='settle'){
 	if($conf['settle_open']==1 || $conf['settle_open']==3){

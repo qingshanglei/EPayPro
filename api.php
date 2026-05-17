@@ -13,7 +13,7 @@ if($act=='query')
 	$key=daddslashes($_GET['key']);
 	$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid='{$pid}' limit 1");
 	if(!$userrow) exit(json_encode(['code'=>-3, 'msg'=>'商户ID不存在']));
-	if($key!==$userrow['key']) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
+	if(!hash_equals($userrow['key'], $key)) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
 
 	$orders=$DB->getColumn("SELECT count(*) from pre_order WHERE uid={$pid}");
 	$lastday=date("Y-m-d",strtotime("-1 day"));
@@ -33,7 +33,7 @@ elseif($act=='settle')
 	if($limit>50)$limit=50;
 	$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid='{$pid}' limit 1");
 	if(!$userrow) exit(json_encode(['code'=>-3, 'msg'=>'商户ID不存在']));
-	if($key!==$userrow['key']) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
+	if(!hash_equals($userrow['key'], $key)) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
 
 	$rs=$DB->query("SELECT * FROM pre_settle WHERE uid='{$pid}' order by id desc limit {$offset},{$limit}");
 	while($row=$rs->fetch(PDO::FETCH_ASSOC)){
@@ -52,7 +52,7 @@ elseif($act=='order')
 	$key=daddslashes($_GET['key']);
 	$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid='{$pid}' limit 1");
 	if(!$userrow) exit(json_encode(['code'=>-3, 'msg'=>'商户ID不存在']));
-	if($key!==$userrow['key']) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
+	if(!hash_equals($userrow['key'], $key)) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
 
 	if(!empty($_GET['trade_no'])){
 		$trade_no=daddslashes($_GET['trade_no']);
@@ -81,7 +81,7 @@ elseif($act=='orders')
 	if($limit>50)$limit=50;
 	$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid='{$pid}' limit 1");
 	if(!$userrow) exit(json_encode(['code'=>-3, 'msg'=>'商户ID不存在']));
-	if($key!==$userrow['key']) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
+	if(!hash_equals($userrow['key'], $key)) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
 
 	$sql = " uid='{$pid}'";
 	if(isset($_GET['status'])){
@@ -107,7 +107,7 @@ elseif($act=='refund')
 	$key=daddslashes($_POST['key']);
 	$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid='{$pid}' limit 1");
 	if(!$userrow) exit(json_encode(['code'=>-3, 'msg'=>'商户ID不存在']));
-	if($key!==$userrow['key']) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
+	if(!hash_equals($userrow['key'], $key)) exit(json_encode(['code'=>-3, 'msg'=>'商户密钥错误']));
 	if($userrow['refund'] == 0) exit(json_encode(['code'=>-2, 'msg'=>'商户未开启订单退款API接口']));
 
 	$money = trim($_POST['money']);

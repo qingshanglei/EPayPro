@@ -6,4 +6,6 @@
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^(.[a-zA-Z0-9\-\_]+).html$ index.php?mod=$1 [QSA,PT,L]
   RewriteRule ^pay/(.*)$ pay.php?s=$1 [QSA,PT,L]
+  # 在安装完成后取消注释以下行以禁止访问install目录
+  # RewriteRule ^install/ - [F,L]
 </IfModule>

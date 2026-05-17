@@ -78,7 +78,7 @@ class PayUtils {
 		$prestr = $prestr . $key;
 		$mysgin = md5($prestr);
 
-		if($mysgin == $sign) {
+		if(hash_equals($mysgin, $sign)) {
 			return true;
 		}
 		else {

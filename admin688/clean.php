@@ -16,6 +16,7 @@ $CACHE->clear();
 if(function_exists("opcache_reset"))@opcache_reset();
 showmsg('清理系统设置缓存成功！',1);
 }elseif($mod=='cleanorder'){
+if(empty($_GET['csrf_token']) || $_GET['csrf_token'] !== $_SESSION['csrf_token'])showmsg('CSRF验证失败，请刷新页面重试',3);
 $DB->exec("DELETE FROM `pre_order` WHERE addtime<'".date("Y-m-d H:i:s",strtotime("-30 days"))."'");
 $DB->exec("OPTIMIZE TABLE `pre_order`");
 showmsg('删除30天前订单记录成功！',1);
@@ -40,6 +41,7 @@ $DB->exec("DELETE FROM `pre_settle` WHERE addtime<'".date("Y-m-d H:i:s",strtotim
 $DB->exec("OPTIMIZE TABLE `pre_settle`");
 showmsg('删除结算记录成功！',1);
 }elseif($mod=='cleanrecordi' && $_POST['do']=='submit'){
+if(empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token'])showmsg('CSRF验证失败，请刷新页面重试',3);
 $days = intval($_POST['days']);
 if($days<=0)showmsg('请确保每项不能为空',3);
 $DB->exec("DELETE FROM `pre_record` WHERE date<'".date("Y-m-d H:i:s",strtotime("-{$days} days"))."'");
@@ -58,7 +60,7 @@ showmsg('删除资金明细成功！',1);
 <form action="./clean.php?mod=cleanorderi" method="post" role="form"><input type="hidden" name="do" value="submit"/>
 <b>订单记录</b>：<input type="text" name="days" value="" placeholder="天数"/>天前的订单记录&nbsp;<input type="submit" name="submit" value="立即删除" class="btn btn-sm btn-danger" onclick="return confirm('删除后无法恢复，确定继续吗？');"/>
 </form><br/>
-<form action="./clean.php?mod=cleansettlei" method="post" role="form"><input type="hidden" name="do" value="submit"/>
+<form action="./clean.php?mod=cleansettlei" method="post" role="form"><input type="hidden" name="do" value="submit"/><input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>"/>
 <b>结算记录</b>：<input type="text" name="days" value="" placeholder="天数"/>天前的结算记录&nbsp;<input type="submit" name="submit" value="立即删除" class="btn btn-sm btn-danger" onclick="return confirm('删除后无法恢复，确定继续吗？');"/>
 </form><br/>
 <form action="./clean.php?mod=cleanrecordi" method="post" role="form"><input type="hidden" name="do" value="submit"/>
